@@ -50,7 +50,7 @@ jobs:
         with:
           export-pdb: false
           combine: true
-          sdk: nightly
+          sdk: given
           target: ''
           ccache-variant: ccache
           build-config: Release
