@@ -38,8 +38,11 @@ jobs:
               'jukebox/jukebox/managers/nong_manager.hpp': 2,
               'jukebox/jukebox/ui/nong_add_popup.cpp': 1,
           }.items():
-              edit(f, 'getSaveDir().native()', 'getSaveDir().toStdPath()', n)
-          edit('jukebox/jukebox/ui/nong_add_popup.cpp', 'std::filesystem::path(pathOpt->native())', 'pathOpt->toStdPath()')
+              edit(f, 'getSaveDir().native()', 'getSaveDir().toStdPath().unwrap()', n)
+          edit('jukebox/jukebox/ui/nong_add_popup.cpp', 'std::filesystem::path(pathOpt->native())', 'pathOpt->toStdPath().unwrap()')
+          edit('jukebox/jukebox/compat/v2.cpp', 'backupDir, err', 'backupDir.string(), err.toString()', 2)
+          edit('jukebox/jukebox/compat/v2.cpp', 'filepath, err', 'filepath.string(), err.toString()', 2)
+          edit('jukebox/jukebox/compat/v2.cpp', 'sourcePath, err', 'sourcePath.string(), err.toString()', 1)
           print('Patched Jukebox', json.loads(Path('mod.json').read_text())['version'])
           PY
       - name: Build Jukebox for GD 2.2091
