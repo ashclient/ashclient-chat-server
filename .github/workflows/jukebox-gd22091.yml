@@ -1,0 +1,66 @@
+name: Experimental Jukebox GD 2.2091 Windows build
+on:
+  push:
+    branches: [jukebox-gd22091-build-20261105]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Fleeym/jukebox
+          ref: abb0b3c9f87336acb594278de5b25525d9177dcf
+          persist-credentials: false
+      - name: Apply experimental Geode 6 source port
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          def edit(filename, old, new, expected=1):
+              p = Path(filename)
+              s = p.read_text(encoding='utf-8')
+              actual = s.count(old)
+              if actual != expected:
+                  raise RuntimeError(f'{filename}: expected {expected} matches for {old!r}, got {actual}')
+              p.write_text(s.replace(old, new), encoding='utf-8')
+              print(f'Applied {filename}: {old!r} -> {new!r} ({actual})')
+          edit('mod.json', '"geode": "5.11.2"', '"geode": "6.0.0-alpha.1"')
+          edit('mod.json', '"version": "3.8.0"', '"version": "3.8.1-beta.1"')
+          edit('CMakeLists.txt', 'project(jukebox VERSION 3.8.0)', 'project(jukebox VERSION 3.8.1)')
+          for f,n in {
+              'jukebox/jukebox/compat/v2.cpp': 2,
+              'jukebox/jukebox/hooks/menu_layer.cpp': 1,
+              'jukebox/jukebox/managers/index_manager.cpp': 1,
+              'jukebox/jukebox/managers/nong_manager.hpp': 2,
+              'jukebox/jukebox/ui/nong_add_popup.cpp': 1,
+          }.items():
+              edit(f, 'getSaveDir().native()', 'getSaveDir().toStdPath()', n)
+          edit('jukebox/jukebox/ui/nong_add_popup.cpp', 'std::filesystem::path(pathOpt->native())', 'pathOpt->toStdPath()')
+          print('Patched Jukebox', json.loads(Path('mod.json').read_text())['version'])
+          PY
+      - name: Build Jukebox for GD 2.2091
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          export-pdb: false
+          combine: true
+          sdk: nightly
+          target: ''
+          ccache-variant: ccache
+          build-config: Release
+  package:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: geode-sdk/build-geode-mod/combine@main
+        with:
+          zstd: true
+          optimize-pngs: true
+        id: build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jukebox-GD-2.2091-experimental
+          path: ${{ steps.build.outputs.build-output }}
